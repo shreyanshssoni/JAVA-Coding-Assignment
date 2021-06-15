@@ -1,6 +1,6 @@
 package com.java.coding.assignment.model;
 
-import lombok.Data;
+
 
 public class AssignmentModelResponse {
 	private Integer ID;

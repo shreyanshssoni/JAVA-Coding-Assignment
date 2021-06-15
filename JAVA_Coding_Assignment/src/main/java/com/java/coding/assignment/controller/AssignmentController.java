@@ -31,10 +31,7 @@ import com.java.coding.assignment.model.AssignmentModelResponse;
 public class AssignmentController {
 
 	@GetMapping("/parent/detail/{pageNo}")
-	public ResponseEntity<?> getListOFParentDetails(@PathVariable Integer pageNo) {
-		if (null == pageNo) {
-			throw new RuntimeException("Please enter page no");
-		}
+	public ResponseEntity<?> getListOfParentDetails(@PathVariable Integer pageNo) {
 		List<AssignmentModelResponse> finalList = new ArrayList<>();
 		try {
 			List<AssignmentParentModel> langList = getParentData();
@@ -51,9 +48,6 @@ public class AssignmentController {
 
 	@GetMapping("/child/detail/{parentId}")
 	public ResponseEntity<?> getListOfChildDetails(@PathVariable Integer parentId) {
-		if (null == parentId) {
-			throw new RuntimeException("Please enter parentId");
-		}
 		List<AssignmentModelResponse> responseList = null;
 		try {
 			List<AssignmentParentModel> langList = getParentData();
@@ -71,7 +65,7 @@ public class AssignmentController {
 		return new ResponseEntity<>(responseList, HttpStatus.OK);
 	}
 
-	public List<AssignmentChildModel> getChildData()
+	private List<AssignmentChildModel> getChildData()
 			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
 		JSONParser jsonParser = new JSONParser();
 		FileReader reader1 = new FileReader("Child.json");
@@ -85,7 +79,7 @@ public class AssignmentController {
 		return langList1;
 	}
 
-	public List<AssignmentParentModel> getParentData()
+	private List<AssignmentParentModel> getParentData()
 			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
 		JSONParser jsonParser = new JSONParser();
 		FileReader reader = new FileReader("Parent.json");
@@ -98,7 +92,7 @@ public class AssignmentController {
 		return langList;
 	}
 
-	public List<AssignmentModelResponse> getPages(List<AssignmentModelResponse> responseList, Integer pageNo) {
+	private List<AssignmentModelResponse> getPages(List<AssignmentModelResponse> responseList, Integer pageNo) {
 		if (pageNo > Math.ceil((double) responseList.size() / 2)) {
 			throw new RuntimeException("Please provide proper page size");
 		}
