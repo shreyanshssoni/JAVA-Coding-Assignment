@@ -23,10 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.coding.assignment.model.AssignmentChildModel;
+import com.java.coding.assignment.model.AssignmentModelResponse;
 import com.java.coding.assignment.model.AssignmentParentModel;
 import com.java.coding.assignment.model.ErrorModel;
-import com.java.coding.assignment.model.AssignmentModelResponse;
-
+/**
+ * @author admin
+ *
+ */
 @RestController
 public class AssignmentController {
 
@@ -37,9 +40,9 @@ public class AssignmentController {
 		}
 		List<AssignmentModelResponse> finalList = new ArrayList<>();
 		try {
-			List<AssignmentParentModel> langList = getParentData();
-			List<AssignmentChildModel> langList1 = getChildData();
-			List<AssignmentModelResponse> responseList = getModelResponse(langList, langList1);
+			List<AssignmentParentModel> parentList = getParentData();
+			List<AssignmentChildModel> childList = getChildData();
+			List<AssignmentModelResponse> responseList = getModelResponse(parentList, childList);
 
 			Collections.sort(responseList, (o1, o2) -> o1.getID() - o2.getID());
 			finalList = getPages(responseList, pageNo);
@@ -56,14 +59,14 @@ public class AssignmentController {
 		}
 		List<AssignmentModelResponse> responseList = null;
 		try {
-			List<AssignmentParentModel> langList = getParentData();
-			List<AssignmentChildModel> langList1 = getChildData();
-			List<AssignmentChildModel> result = langList1.stream().filter(p -> p.getParentId().equals(parentId))
+			List<AssignmentParentModel> parentList = getParentData();
+			List<AssignmentChildModel> childList = getChildData();
+			List<AssignmentChildModel> result = childList.stream().filter(p -> p.getParentId().equals(parentId))
 					.collect(Collectors.toList());
 			if (null == result || result.isEmpty()) {
 				throw new RuntimeException("Given parentId is not present");
 			}
-			responseList = getModelResponse1(langList, result);
+			responseList = getModelResponse1(parentList, result);
 			Collections.sort(responseList, (o1, o2) -> o1.getID() - o2.getID());
 		} catch (Exception e) {
 			return new ResponseEntity<>(new ErrorModel(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -71,31 +74,31 @@ public class AssignmentController {
 		return new ResponseEntity<>(responseList, HttpStatus.OK);
 	}
 
-	public List<AssignmentChildModel> getChildData()
-			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
-		JSONParser jsonParser = new JSONParser();
-		FileReader reader1 = new FileReader("Child.json");
-		JSONObject obj1 = (JSONObject) jsonParser.parse(reader1);
-
-		JSONArray parentList1 = (JSONArray) obj1.get("data");
-		ObjectMapper mapper = new ObjectMapper();
-		List<AssignmentChildModel> langList1 = mapper.readValue(parentList1.toJSONString(),
-				new TypeReference<List<AssignmentChildModel>>() {
-				});
-		return langList1;
-	}
-
 	public List<AssignmentParentModel> getParentData()
 			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
 		JSONParser jsonParser = new JSONParser();
 		FileReader reader = new FileReader("Parent.json");
 		JSONObject obj = (JSONObject) jsonParser.parse(reader);
-		JSONArray parentList = (JSONArray) obj.get("data");
+		JSONArray dataList = (JSONArray) obj.get("data");
 		ObjectMapper mapper = new ObjectMapper();
-		List<AssignmentParentModel> langList = mapper.readValue(parentList.toJSONString(),
+		List<AssignmentParentModel> parentList = mapper.readValue(dataList.toJSONString(),
 				new TypeReference<List<AssignmentParentModel>>() {
 				});
-		return langList;
+		return parentList;
+	}
+
+	public List<AssignmentChildModel> getChildData()
+			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
+		JSONParser jsonParser = new JSONParser();
+		FileReader reader = new FileReader("Child.json");
+		JSONObject obj = (JSONObject) jsonParser.parse(reader);
+
+		JSONArray dataList = (JSONArray) obj.get("data");
+		ObjectMapper mapper = new ObjectMapper();
+		List<AssignmentChildModel> childList = mapper.readValue(dataList.toJSONString(),
+				new TypeReference<List<AssignmentChildModel>>() {
+				});
+		return childList;
 	}
 
 	public List<AssignmentModelResponse> getPages(List<AssignmentModelResponse> responseList, Integer pageNo) {
@@ -113,18 +116,18 @@ public class AssignmentController {
 		return responseList.subList(fromIndex, toIndex);
 	}
 
-	private List<AssignmentModelResponse> getModelResponse(List<AssignmentParentModel> langList,
-			List<AssignmentChildModel> langList1) {
+	private List<AssignmentModelResponse> getModelResponse(List<AssignmentParentModel> parentList,
+			List<AssignmentChildModel> childList) {
 		List<AssignmentModelResponse> response = new ArrayList<>();
 
-		langList.forEach(action -> {
+		parentList.forEach(action -> {
 			AssignmentModelResponse assignmentModelResponse = new AssignmentModelResponse();
 			assignmentModelResponse.setID(action.getID());
 			assignmentModelResponse.setReceiver(action.getReceiver());
 			assignmentModelResponse.setSender(action.getSender());
 			assignmentModelResponse.setTotalAmount(action.getTotalAmount());
 
-			List<AssignmentChildModel> result = langList1.stream().filter(p -> p.getParentId().equals(action.getID()))
+			List<AssignmentChildModel> result = childList.stream().filter(p -> p.getParentId().equals(action.getID()))
 					.collect(Collectors.toList());
 			if (null != result && !result.isEmpty()) {
 				Long sum = result.stream().mapToLong(AssignmentChildModel::getPaidAmount).sum();
@@ -138,16 +141,16 @@ public class AssignmentController {
 		return response;
 	}
 
-	private List<AssignmentModelResponse> getModelResponse1(List<AssignmentParentModel> langList,
-			List<AssignmentChildModel> langList1) {
+	private List<AssignmentModelResponse> getModelResponse1(List<AssignmentParentModel> parentList,
+			List<AssignmentChildModel> childList) {
 		List<AssignmentModelResponse> response = new ArrayList<>();
 
-		langList1.forEach(action -> {
+		childList.forEach(action -> {
 			AssignmentModelResponse assignmentModelResponse = new AssignmentModelResponse();
 			assignmentModelResponse.setID(action.getID());
 			assignmentModelResponse.setTotalPaidAmount(action.getPaidAmount());
 
-			List<AssignmentParentModel> result = langList.stream().filter(p -> p.getID().equals(action.getParentId()))
+			List<AssignmentParentModel> result = parentList.stream().filter(p -> p.getID().equals(action.getParentId()))
 					.collect(Collectors.toList());
 			result.forEach(action1 -> {
 				assignmentModelResponse.setReceiver(action1.getReceiver());
