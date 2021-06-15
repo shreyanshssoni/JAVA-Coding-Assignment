@@ -12,6 +12,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,15 +35,21 @@ import com.java.coding.assignment.model.ErrorModel;
 @RestController
 public class AssignmentController {
 
+	
+	@Autowired
+	private ObjectMapper mapper;
+	
 	@GetMapping("/parent/detail/{pageNo}")
 	public ResponseEntity<?> getListOfParentDetails(@PathVariable Integer pageNo) {
 		List<AssignmentModelResponse> finalList = new ArrayList<>();
 		try {
+			//methods for get the data from jsonFiles
 			List<AssignmentParentModel> parentList = getParentData();
 			List<AssignmentChildModel> childList = getChildData();
 			List<AssignmentModelResponse> responseList = getModelResponse(parentList, childList);
 
 			Collections.sort(responseList, (o1, o2) -> o1.getID() - o2.getID());
+			//pagination basis on by default 2 pageSize
 			finalList = getPages(responseList, pageNo);
 		} catch (Exception e) {
 			return new ResponseEntity<>(new ErrorModel(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -53,14 +61,16 @@ public class AssignmentController {
 	public ResponseEntity<?> getListOfChildDetails(@PathVariable Integer parentId) {
 		List<AssignmentModelResponse> responseList = null;
 		try {
+			//methods for get the data from jsonFiles
 			List<AssignmentParentModel> parentList = getParentData();
 			List<AssignmentChildModel> childList = getChildData();
+			//Filtering data from parentId
 			List<AssignmentChildModel> result = childList.stream().filter(p -> p.getParentId().equals(parentId))
 					.collect(Collectors.toList());
 			if (null == result || result.isEmpty()) {
 				throw new RuntimeException("Given parentId is not present");
 			}
-			responseList = getModelResponse1(parentList, result);
+			responseList = getModelChildResponse(parentList, result);
 			Collections.sort(responseList, (o1, o2) -> o1.getID() - o2.getID());
 		} catch (Exception e) {
 			return new ResponseEntity<>(new ErrorModel(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -68,33 +78,61 @@ public class AssignmentController {
 		return new ResponseEntity<>(responseList, HttpStatus.OK);
 	}
 
+	/**
+	 * This method is used for read .json file
+	 * 
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws ParseException
+	 * @throws JsonProcessingException
+	 * @throws JsonMappingException
+	 */
 	private List<AssignmentParentModel> getParentData()
 			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
 		JSONParser jsonParser = new JSONParser();
-		FileReader reader = new FileReader("Parent.json");
+		//reading File from resourcePath
+		FileReader reader = new FileReader(new ClassPathResource("jsonfiles/Parent.json").getFile());
 		JSONObject obj = (JSONObject) jsonParser.parse(reader);
 		JSONArray dataList = (JSONArray) obj.get("data");
-		ObjectMapper mapper = new ObjectMapper();
+		
 		List<AssignmentParentModel> parentList = mapper.readValue(dataList.toJSONString(),
 				new TypeReference<List<AssignmentParentModel>>() {
 				});
 		return parentList;
 	}
 
+	/**
+	 * This method is used for read .json file
+	 * 
+	 * @return
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws ParseException
+	 * @throws JsonProcessingException
+	 * @throws JsonMappingException
+	 */
 	private List<AssignmentChildModel> getChildData()
 			throws FileNotFoundException, IOException, ParseException, JsonProcessingException, JsonMappingException {
 		JSONParser jsonParser = new JSONParser();
-		FileReader reader = new FileReader("Child.json");
+		//reading File from resourcePath
+		FileReader reader = new FileReader(new ClassPathResource("jsonfiles/Child.json").getFile());
 		JSONObject obj = (JSONObject) jsonParser.parse(reader);
-
 		JSONArray dataList = (JSONArray) obj.get("data");
-		ObjectMapper mapper = new ObjectMapper();
+		
 		List<AssignmentChildModel> childList = mapper.readValue(dataList.toJSONString(),
 				new TypeReference<List<AssignmentChildModel>>() {
 				});
 		return childList;
 	}
 
+	/**
+	 * This method is used for pagination
+	 * 
+	 * @param responseList
+	 * @param pageNo
+	 * @return
+	 */
 	private List<AssignmentModelResponse> getPages(List<AssignmentModelResponse> responseList, Integer pageNo) {
 		if (pageNo > Math.ceil((double) responseList.size() / 2)) {
 			throw new RuntimeException("Please provide proper page size");
@@ -110,6 +148,14 @@ public class AssignmentController {
 		return responseList.subList(fromIndex, toIndex);
 	}
 
+	
+	/**
+	 * This method is used for preparing APIResponse
+	 * 
+	 * @param parentList
+	 * @param childList
+	 * @return
+	 */
 	private List<AssignmentModelResponse> getModelResponse(List<AssignmentParentModel> parentList,
 			List<AssignmentChildModel> childList) {
 		List<AssignmentModelResponse> response = new ArrayList<>();
@@ -124,8 +170,7 @@ public class AssignmentController {
 			List<AssignmentChildModel> result = childList.stream().filter(p -> p.getParentId().equals(action.getID()))
 					.collect(Collectors.toList());
 			if (null != result && !result.isEmpty()) {
-				Long sum = result.stream().mapToLong(AssignmentChildModel::getPaidAmount).sum();
-				assignmentModelResponse.setTotalPaidAmount(sum);
+				assignmentModelResponse.setTotalPaidAmount(result.stream().mapToLong(AssignmentChildModel::getPaidAmount).sum());
 			} else {
 				assignmentModelResponse.setTotalPaidAmount(0L);
 			}
@@ -135,7 +180,15 @@ public class AssignmentController {
 		return response;
 	}
 
-	private List<AssignmentModelResponse> getModelResponse1(List<AssignmentParentModel> parentList,
+	
+	/**
+	 * This method is used for childataResponse
+	 * 
+	 * @param parentList
+	 * @param childList
+	 * @return
+	 */
+	private List<AssignmentModelResponse> getModelChildResponse(List<AssignmentParentModel> parentList,
 			List<AssignmentChildModel> childList) {
 		List<AssignmentModelResponse> response = new ArrayList<>();
 
