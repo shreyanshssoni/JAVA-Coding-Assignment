@@ -1,7 +1,5 @@
 package com.java.coding.assignment.model;
 
-
-
 public class AssignmentModelResponse {
 	private Integer ID;
 	private String Sender;
